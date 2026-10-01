@@ -57,6 +57,8 @@ button.mainbtn:hover{background:linear-gradient(#34536c,#20394f)}
 #mWarhead{right:24px;bottom:210px;font-size:16px}
 #mThermal{left:24px;bottom:170px;font-size:13px}
 #mFullscreen{left:170px;bottom:170px;font-size:13px}
+#mEsc{right:110px;bottom:290px;font-size:14px}
+#mF{right:24px;bottom:290px;font-size:18px}
 
 /* ===== HUD/OSD ===== */
 #hud{display:none;position:fixed;inset:0;pointer-events:none;color:#fff;z-index:4;font-family:'Courier New',monospace;font-weight:bold}
@@ -93,7 +95,7 @@ button.mainbtn:hover{background:linear-gradient(#34536c,#20394f)}
 #damageOverlay.show{opacity:1}
 #warheadSwitched{position:absolute;bottom:100px;left:50%;transform:translateX(-50%);padding:8px 16px;border-radius:9px;background:#0d5a72;border:1px solid #1dd9ff;font:13px monospace;color:#fff;opacity:0;transition:opacity .25s;letter-spacing:1px}
 #warheadSwitched.show{opacity:1}
-#respawnMsg{position:absolute;left:50%;top:62%;transform:translate(-50%,-50%);padding:16px 26px;border-radius:12px;background:#000c;border:1px solid #fff3;font:16px monospace;color:#ffd166;display:none;text-align:center;line-height:1.7}
+#respawnMsg{position:absolute;left:50%;top:62%;transform:translate(-50%,-50%);padding:16px 26px;border-radius:12px;background:#000c;border:1px solid #fff3;font:16px monospace;color:#ffd166;display:none;text-align:center;line-height:1.7;pointer-events:auto}
 #respawnMsg b{color:#fff;font-size:20px}
 #pause{display:none;position:fixed;inset:0;z-index:15;align-items:center;justify-content:center;background:#000a;color:#fff}
 .pausebox{width:340px;max-width:88vw;background:#0a1118;padding:26px;border-radius:18px;text-align:center;border:1px solid #fff2}
@@ -218,6 +220,8 @@ button.mainbtn:hover{background:linear-gradient(#34536c,#20394f)}
   <div class="mbtn" id="mFire">🚀</div>
   <div class="mbtn" id="mWarhead">🎯</div>
   <div class="mbtn" id="mThermal">🔥</div>
+  <div class="mbtn" id="mEsc">⏸</div>
+  <div class="mbtn" id="mF">F</div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
@@ -454,7 +458,6 @@ function rebuildWarhead(){
 }
 
 function updateHudMode(){
-  // OSD тільки для КВН
   if(droneModel===1){
     osdEl.classList.add('kvn');
     simpleHudEl.classList.remove('show');
@@ -462,11 +465,9 @@ function updateHudMode(){
     osdEl.classList.remove('kvn');
     simpleHudEl.classList.add('show');
   }
-  // Тепловізор тільки КВН
   if(droneModel!==1 && thermalOn){
     setThermal(false);
   }
-  // Кнопка тепловізора на мобільному
   const mTh=$('mThermal');
   if(mTh) mTh.style.display = droneModel===1 ? 'flex' : 'none';
 }
@@ -914,7 +915,7 @@ function setupMobileControls(){
     const dist=Math.hypot(dx,dy);
     if(dist>maxR){ dx*=maxR/dist; dy*=maxR/dist; }
     knob.style.transform=`translate(${dx}px,${dy}px)`;
-    const dz=dy/maxR;  // у нас Y вниз = W
+    const dz=dy/maxR;
     const dxn=dx/maxR;
     keys.KeyW = dz<-0.25;
     keys.KeyS = dz>0.25;
@@ -922,7 +923,7 @@ function setupMobileControls(){
     keys.KeyD = dxn>0.25;
   }
 
-  // Right-side camera drag (half of screen)
+  // Right-side camera drag
   let camTouch=null, camLast={x:0,y:0};
   document.addEventListener('touchstart',e=>{
     if(!mobileMode || !running) return;
@@ -956,7 +957,6 @@ function setupMobileControls(){
     el.addEventListener('touchstart',e=>{ e.preventDefault(); keys[keyName]=true; el.classList.add('on'); },{passive:false});
     el.addEventListener('touchend',e=>{ e.preventDefault(); keys[keyName]=false; el.classList.remove('on'); },{passive:false});
     el.addEventListener('touchcancel',()=>{ keys[keyName]=false; el.classList.remove('on'); });
-    // mouse support for testing
     el.addEventListener('mousedown',()=>{ keys[keyName]=true; el.classList.add('on'); });
     el.addEventListener('mouseup',()=>{ keys[keyName]=false; el.classList.remove('on'); });
     el.addEventListener('mouseleave',()=>{ keys[keyName]=false; el.classList.remove('on'); });
@@ -980,6 +980,13 @@ function setupMobileControls(){
 
   $('mThermal').addEventListener('touchstart',e=>{ e.preventDefault(); toggleThermal(); },{passive:false});
   $('mThermal').addEventListener('mousedown',toggleThermal);
+
+  // NEW: мобільні кнопки ESC (пауза) та F (респавн)
+  $('mEsc').addEventListener('touchstart',e=>{ e.preventDefault(); togglePause(); },{passive:false});
+  $('mEsc').addEventListener('mousedown',togglePause);
+
+  $('mF').addEventListener('touchstart',e=>{ e.preventDefault(); if(running && !droneAlive) spawnDrone(); },{passive:false});
+  $('mF').addEventListener('mousedown',()=>{ if(running && !droneAlive) spawnDrone(); });
 }
 
 /* ===== GAME FLOW ===== */
@@ -1310,10 +1317,9 @@ function updateFlight(dt){
   velocity.multiplyScalar(Math.pow(0.30,dt));
   if(vert===0) velocity.y*=Math.pow(0.12,dt);
 
-  // Mobile - roll from A/D
   const rollInput=(keys.KeyD?1:0)-(keys.KeyA?1:0);
   if(rollInput!==0){
-    yaw += rollInput*1.2*dt; // на мобільному A/D = поворот
+    yaw += rollInput*1.2*dt;
   }
 
   roll=-velocity.x*0.008;
@@ -1396,7 +1402,7 @@ function updateOSD(dt, fps){
   $('osdHorizon').style.transform=`translateX(-50%) rotate(${THREE.MathUtils.radToDeg(roll)}deg)`;
 }
 
-/* ===== SIMPLE HUD (для FP-1 та Stinger) ===== */
+/* ===== SIMPLE HUD ===== */
 function updateSimpleHud(){
   const speed=Math.round(velocity.length()*3.6);
   $('shSpeed').textContent='SPEED '+speed+' km/h';
