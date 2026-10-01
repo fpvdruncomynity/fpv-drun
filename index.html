@@ -14,7 +14,7 @@ canvas.thermal{filter:invert(1) hue-rotate(180deg) saturate(2.5) contrast(1.2)}
 .logo{font-size:12px;letter-spacing:7px;color:#65d8ff;margin-bottom:8px}
 h1{font-size:38px;letter-spacing:6px;margin:0 0 6px}
 .sub{opacity:.65;margin-bottom:16px;font-size:13px}
-.drone-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
+.drone-grid{display:grid;grid-template-columns:repeat(auto-fit, minmax(170px, 1fr));gap:8px;margin-bottom:12px}
 .drone-btn{padding:11px 8px;border:1px solid #ffffff18;border-radius:12px;background:linear-gradient(#25394d,#172636);color:#fff;cursor:pointer;text-align:center}
 .drone-btn:hover{background:linear-gradient(#34536c,#20394f)}
 .drone-btn.active{border-color:#1dd9ff;background:linear-gradient(#0d5a72,#0a3d52);box-shadow:0 0 0 1px #1dd9ff inset}
@@ -74,7 +74,6 @@ button.mainbtn:hover{background:linear-gradient(#34536c,#20394f)}
 .osd-bc .dim{color:#666}
 .osd-crosshair{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:34px;font-weight:400;line-height:1;text-shadow:0 0 4px #000}
 .osd-horizon{position:absolute;left:50%;top:calc(50% - 22px);transform:translateX(-50%);white-space:nowrap;font-size:13px;letter-spacing:4px;color:#fff;text-shadow:0 0 3px #000}
-/* Simple HUD for non-KVN drones */
 #simpleHud{display:none;position:fixed;inset:0;pointer-events:none;color:#fff;z-index:4;font-family:Arial}
 #simpleHud.show{display:block}
 .sh-info{position:absolute;padding:6px 10px;background:#0008;border:1px solid #fff2;border-radius:7px;font:14px monospace}
@@ -116,7 +115,7 @@ button.mainbtn:hover{background:linear-gradient(#34536c,#20394f)}
 <div id="menu"><div class="box">
   <div class="logo">FPV DRUN SIM · FULL</div>
   <h1>FPV DRUN SIM</h1>
-  <div class="sub">3 БПЛА · 5 боєприпасів · Шахеди · РЕБ · Stinger</div>
+  <div class="sub">4 БПЛА · 5 боєприпасів · Шахеди · РЕБ · Stinger</div>
   <div style="font-size:12px;letter-spacing:2px;color:#72dfff;margin-bottom:8px;text-align:left">ВИБІР БПЛА</div>
   <div class="drone-grid" id="droneGrid"></div>
   <button id="play" class="mainbtn primary" type="button">▶ ПОЧАТИ ПОЛІТ</button>
@@ -245,9 +244,10 @@ let thermalOn=false;
 const keys={};
 
 const droneModels=[
-  {id:'fp1', name:'FP-1', desc:'Український FPV', maxSpeed:108, boost:150, accel:80, accelB:115, type:'fpv'},
-  {id:'kvn', name:'КВН', desc:'Жовта рама · Anti-РЕБ', maxSpeed:98, boost:138, accel:72, accelB:105, type:'fpv', rebImmune:true, thermal:true},
-  {id:'stinger', name:'STINGER', desc:'Перехватчик · ЛКМ ракета', maxSpeed:135, boost:180, accel:100, accelB:140, type:'interceptor'}
+  {id:'fp1', name:'FP-1', desc:'Український FPV', maxSpeed:108, boost:150, accel:80, accelB:115, type:'fpv', fov:80},
+  {id:'kvn', name:'КВН', desc:'Жовта рама · Anti-РЕБ', maxSpeed:98, boost:138, accel:72, accelB:105, type:'fpv', rebImmune:true, thermal:true, fov:80},
+  {id:'stinger', name:'STINGER', desc:'Перехватчик · ЛКМ ракета', maxSpeed:135, boost:180, accel:100, accelB:140, type:'interceptor', fov:80},
+  {id:'vyriy', name:'ВИРІЙ 10', desc:'Важкий бомбер · 10"', maxSpeed:95, boost:135, accel:65, accelB:95, type:'fpv', fov:100}
 ];
 
 const warheads=[
@@ -416,10 +416,94 @@ function makeStingerMesh(){
   g.position.set(0,14,0); scene.add(g); return g;
 }
 
+/* ===== ВИРІЙ 10 ===== */
+function makeVyriy10Mesh(){
+  const g=new THREE.Group();
+  const carbon=mLam(0x0c0e10), carbonM=mLam(0x15171a);
+  const black=mStd(0x1a1a1a), darkBlack=mStd(0x0a0a0a);
+  const motorM=mStd(0x2a2d30);
+  const greenAnt=mBas(0x88cc33);
+  const whiteAnt=mStd(0xffffff);
+  const redM=mBas(0xff2244);
+  // Матові матеріали, завжди видно
+  const coilMat=new THREE.MeshLambertMaterial({color:0xe8e8e8});
+  const wireMat=new THREE.MeshLambertMaterial({color:0xd08030});
+
+  const bottom=new THREE.Mesh(new THREE.BoxGeometry(0.75,0.04,0.95),carbon); bottom.position.y=-0.02; g.add(bottom);
+  const top=new THREE.Mesh(new THREE.BoxGeometry(0.45,0.03,0.55),carbonM); top.position.y=0.12; g.add(top);
+
+  const battery=new THREE.Mesh(new THREE.BoxGeometry(0.5,0.18,0.35),darkBlack); battery.position.set(0,0.22,0.05); g.add(battery);
+  const batteryStrap=new THREE.Mesh(new THREE.BoxGeometry(0.52,0.02,0.05),mStd(0x333333)); batteryStrap.position.set(0,0.22,0.05); g.add(batteryStrap);
+
+  const camH=new THREE.Mesh(new THREE.BoxGeometry(0.12,0.12,0.14),darkBlack); camH.position.set(0,0.06,-0.48); g.add(camH);
+  const camLens=new THREE.Mesh(new THREE.CylinderGeometry(0.045,0.045,0.06,10),black); camLens.rotation.x=Math.PI/2; camLens.position.set(0,0.06,-0.56); g.add(camLens);
+
+  const mast=new THREE.Mesh(new THREE.CylinderGeometry(0.01,0.01,0.4,6),carbon); mast.position.set(0,0.35,0.2); g.add(mast);
+  const gps=new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,0.03,8),whiteAnt); gps.position.set(0,0.55,0.2); g.add(gps);
+  const greenAntenna=new THREE.Mesh(new THREE.BoxGeometry(0.12,0.008,0.18),greenAnt); greenAntenna.position.set(0,0.38,0.2); g.add(greenAntenna);
+
+  const antWire=new THREE.Mesh(new THREE.CylinderGeometry(0.004,0.004,0.3,4),carbon); antWire.position.set(0.15,0.25,0.3); antWire.rotation.x=-0.3; g.add(antWire);
+
+  for(const sx of [-1,1]) for(const sz of [-1,1]){
+    const arm=new THREE.Mesh(new THREE.CylinderGeometry(0.018,0.018,1.05,6),carbon);
+    arm.rotation.z=Math.PI/2; arm.rotation.y=Math.atan2(sz,sx); arm.position.set(sx*0.45,0.01,sz*0.45); g.add(arm);
+
+    const motor=new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.07,0.12,12),motorM); motor.position.set(sx*0.92,0.02,sz*0.92); g.add(motor);
+    const bell=new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.06,0.04,10),mStd(0x555555)); bell.position.set(sx*0.92,0.09,sz*0.92); g.add(bell);
+
+    const prop=new THREE.Group(); prop.position.set(sx*0.92,0.12,sz*0.92);
+    for(let i=0;i<3;i++){
+      const blade=new THREE.Mesh(new THREE.BoxGeometry(0.48,0.008,0.05),new THREE.MeshLambertMaterial({color:0x1a1a1a,transparent:true,opacity:0.8}));
+      blade.rotation.y=i*(Math.PI*2/3);
+      prop.add(blade);
+    }
+    prop.userData.isProp=true; prop.userData.spin=30+Math.random()*4; g.add(prop);
+  }
+
+  // Ноги: карбонова нога + спіральна пружина + довгий мідний дріт + загнутий кінчик
+  const coilR=0.028, coilH=0.13, coilTurns=5, coilSegs=coilTurns*16;
+  const tubeR=0.011;
+  for(const sx of [-1,1]) for(const sz of [-1,1]){
+    const leg=new THREE.Mesh(new THREE.CylinderGeometry(0.015,0.015,0.28,6),carbon);
+    leg.position.set(sx*0.35,-0.18,sz*0.35); g.add(leg);
+
+    const coilPts=[];
+    for(let i=0;i<=coilSegs;i++){
+      const t=i/coilSegs;
+      const a=t*Math.PI*2*coilTurns;
+      coilPts.push(new THREE.Vector3(Math.cos(a)*coilR,-t*coilH,Math.sin(a)*coilR));
+    }
+    const coilCurve=new THREE.CatmullRomCurve3(coilPts);
+    const coilGeo=new THREE.TubeGeometry(coilCurve,coilSegs,tubeR,8,false);
+    const coil=new THREE.Mesh(coilGeo,coilMat);
+    coil.position.set(sx*0.35,-0.32,sz*0.35); g.add(coil);
+
+    const pin=new THREE.Mesh(new THREE.CylinderGeometry(0.008,0.008,coilH+0.02,6),mStd(0x333333));
+    pin.position.set(sx*0.35,-0.32-coilH/2,sz*0.35); g.add(pin);
+
+    const wireLen=0.50;
+    const wireTopY=-0.32-coilH;
+    const wire=new THREE.Mesh(new THREE.CylinderGeometry(0.006,0.006,wireLen,6),wireMat);
+    wire.position.set(sx*0.35,wireTopY-wireLen/2,sz*0.35); g.add(wire);
+
+    const tipLen=0.07;
+    const tip=new THREE.Mesh(new THREE.CylinderGeometry(0.006,0.006,tipLen,6),wireMat);
+    tip.rotation.z=Math.PI/2;
+    tip.position.set(sx*0.35+sx*tipLen/2,wireTopY-wireLen,sz*0.35); g.add(tip);
+  }
+
+  const ledB=new THREE.Mesh(new THREE.BoxGeometry(0.3,0.012,0.03),redM); ledB.position.set(0,-0.01,0.45); g.add(ledB);
+
+  const glow=new THREE.Mesh(new THREE.RingGeometry(0.4,0.5,16),mBas(0xff6600,0.5)); glow.rotation.x=-Math.PI/2; glow.position.set(0,-0.3,0); glow.userData.isGlowRing=true; g.add(glow);
+
+  g.position.set(0,14,0); scene.add(g); return g;
+}
+
 function buildDroneByModel(idx){
   if(idx===0) return makeFP1Mesh();
   if(idx===1) return makeKVNMesh();
-  return makeStingerMesh();
+  if(idx===2) return makeStingerMesh();
+  return makeVyriy10Mesh();
 }
 
 function getCameraOffset(){
@@ -427,6 +511,7 @@ function getCameraOffset(){
   if(id==='fp1') return new THREE.Vector3(0, 0.12, -0.60);
   if(id==='kvn') return new THREE.Vector3(0, 0.45, -0.30);
   if(id==='stinger') return new THREE.Vector3(0, 0.14, -0.62);
+  if(id==='vyriy') return new THREE.Vector3(0, 0.10, -0.62);
   return new THREE.Vector3(0, 0.30, -0.40);
 }
 
@@ -450,9 +535,11 @@ function rebuildWarhead(){
     drone.traverse(c=>{ if(c.userData && c.userData.isGlowRing && c.material) c.material.color.setHex(w.fx); });
     updateWarheadList(); return;
   }
-  const pod=buildWarheadMesh(w);
-  pod.position.set(0,-0.5,0.05);
-  drone.add(pod);
+  if(droneModels[droneModel].id!=='vyriy'){
+    const pod=buildWarheadMesh(w);
+    pod.position.set(0,-0.5,0.05);
+    drone.add(pod);
+  }
   drone.traverse(c=>{ if(c.userData && c.userData.isGlowRing && c.material) c.material.color.setHex(w.fx); });
   updateWarheadList();
 }
@@ -470,6 +557,12 @@ function updateHudMode(){
   }
   const mTh=$('mThermal');
   if(mTh) mTh.style.display = droneModel===1 ? 'flex' : 'none';
+
+  const newFov = droneModels[droneModel].fov || 80;
+  if(camera && camera.fov !== newFov){
+    camera.fov = newFov;
+    camera.updateProjectionMatrix();
+  }
 }
 
 function updateWarheadList(){
@@ -775,7 +868,6 @@ function init(){
   $('fullscreenBtn').addEventListener('click',toggleFullscreen);
   $('fsToggle').addEventListener('click',toggleFullscreen);
 
-  // Settings: gfx
   $('gfxOpts').querySelectorAll('button').forEach(b=>{
     b.addEventListener('click',()=>{
       $('gfxOpts').querySelectorAll('button').forEach(x=>x.classList.remove('active'));
@@ -784,7 +876,6 @@ function init(){
       applyGfxQuality();
     });
   });
-  // Settings: mobile
   $('mobileOpts').querySelectorAll('button').forEach(b=>{
     b.addEventListener('click',()=>{
       $('mobileOpts').querySelectorAll('button').forEach(x=>x.classList.remove('active'));
@@ -923,7 +1014,6 @@ function setupMobileControls(){
     keys.KeyD = dxn>0.25;
   }
 
-  // Right-side camera drag
   let camTouch=null, camLast={x:0,y:0};
   document.addEventListener('touchstart',e=>{
     if(!mobileMode || !running) return;
@@ -981,7 +1071,6 @@ function setupMobileControls(){
   $('mThermal').addEventListener('touchstart',e=>{ e.preventDefault(); toggleThermal(); },{passive:false});
   $('mThermal').addEventListener('mousedown',toggleThermal);
 
-  // NEW: мобільні кнопки ESC (пауза) та F (респавн)
   $('mEsc').addEventListener('touchstart',e=>{ e.preventDefault(); togglePause(); },{passive:false});
   $('mEsc').addEventListener('mousedown',togglePause);
 
